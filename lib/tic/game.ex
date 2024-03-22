@@ -2,31 +2,31 @@ defmodule Tic.TicTacToe do
   defstruct a1: " ", a2: " ", a3: " ",
             b1: " ", b2: " ", b3: " ",
             c1: " ", c2: " ", c3: " ",
-            current_player: "X", game_state: :playing
-
-  @doc """
-  Creates a new Tic.TicTacToe board with empty cells.
-  """
+            current_player: "X", game_state: :playing,
+            player_1_id: nil, player_2_id: nil, current_player_id: nil
 
   def new() do
     %Tic.TicTacToe{}
   end
 
-  @doc """
-  Makes a move on the board by placing the current player's mark at the given position.
-  Returns the updated board.
-  """
   def move(board, position) do
-    case Map.get(board, position) do
-      " " ->
+    case {Map.get(board, position), board.current_player_id == player_id(board, board.current_player)} do
+      {" ", true} ->
+        next_player = next_player(board.current_player)
         board
         |> Map.put(position, board.current_player)
-        |> Map.put(:current_player, next_player(board.current_player))
+        |> Map.put(:current_player, next_player)
+        |> Map.put(:current_player_id, player_id(board, next_player))
         |> check_game_state()
+      {" ", false} ->
+        {:error, "Invalid move. It's not your turn."}
       _ ->
-        raise "Invalid move. Cell #{position} is already occupied."
+        {:error, "Invalid move. Cell #{position} is already occupied."}
     end
   end
+
+  defp player_id(board, "X"), do: board.player_1_id
+  defp player_id(board, "O"), do: board.player_2_id
 
   defp next_player("X"), do: "O"
   defp next_player("O"), do: "X"
@@ -96,11 +96,25 @@ defmodule Tic.TicTacToe do
     end
   end
 
+  def save_game(game) do
+    %Tic.GameSchema{
+      player_1_id: game.player_1_id,
+      player_2_id: game.player_2_id,
+      winner_id: winner_id(game),
+      status: game.game_state
+    }
+    |> Tic.Repo.insert()
+  end
+
+  defp winner_id(%{game_state: :player_1_win}), do: :player_1_id
+  defp winner_id(%{game_state: :player_2_win}), do: :player_2_id
+  defp winner_id(_), do: nil
+
   @doc """
     Validates the given position and returns {:ok, valid_position} if it's valid,
     or :error if it's invalid.
     """
-    def validate_position(position) do
+  def validate_position(position) do
       valid_positions = ~w(a1 a2 a3 b1 b2 b3 c1 c2 c3)
       if position in valid_positions, do: {:ok, String.to_atom(position)}, else: :error
     end

@@ -22,7 +22,9 @@ defmodule TicWeb.Router do
 
     get "/", PageController, :home
 
-    live "/game", GameLive
+    live_session :authenticated, on_mount: [{TicWeb.UserAuth, :ensure_authenticated}] do
+      live "/game", GameLive
+    end
   end
 
   # Other scopes may use custom stacks.
